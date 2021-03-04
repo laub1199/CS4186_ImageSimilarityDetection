@@ -55,19 +55,21 @@ def Hist(queryPath, comparePath):
         return
 
     f1 = open(queryPath + ".txt").read().split()
-    f2 = open(comparePath + ".txt").read().split()
-
+    
     x1 = int(f1[0])
     y1 = int(f1[1])
     w1 = int(f1[2])
     h1 = int(f1[3])
     query = query[y1:y1 + h1, x1:x1 + w1]
 
-    x2 = int(f2[0])
-    y2 = int(f2[1])
-    w2 = int(f2[2])
-    h2 = int(f2[3])
-    compare = compare[y2:y2 + h2, x2:x2 + w2]
+    if int(str(comparePath).split('Images/')[1]) <= 2000:
+        f2 = open(comparePath + ".txt").read().split()
+
+        x2 = int(f2[0])
+        y2 = int(f2[1])
+        w2 = int(f2[2])
+        h2 = int(f2[3])
+        compare = compare[y2:y2 + h2, x2:x2 + w2]
 
 
     # hsv_query = cv2.cvtColor(query, cv2.COLOR_BGR2GRAY)
