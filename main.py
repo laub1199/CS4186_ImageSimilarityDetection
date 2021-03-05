@@ -176,6 +176,53 @@ def YOLO(imagePath, confidence, threshold):
     cv2.imshow("Image", img)
     cv2.waitKey(0)
 
+
+def ORB_BFBFKNN(queryPath, comparePath):
+    query = cv2.imread(queryPath + ".jpg")
+    compare = cv2.imread(comparePath + ".jpg")
+
+    f1 = open(queryPath + ".txt").read().split()
+
+    x1 = int(f1[0])
+    y1 = int(f1[1])
+    w1 = int(f1[2])
+    h1 = int(f1[3])
+    query = query[y1:y1 + h1, x1:x1 + w1]
+
+    if int(str(comparePath).split('Images/')[1]) <= 2000:
+        f2 = open(comparePath + ".txt").read().split()
+
+        x2 = int(f2[0])
+        y2 = int(f2[1])
+        w2 = int(f2[2])
+        h2 = int(f2[3])
+        compare = compare[y2:y2 + h2, x2:x2 + w2]
+
+    img1 = cv2.cvtColor(query, cv2.COLOR_BGR2GRAY)
+    img2 = cv2.cvtColor(compare, cv2.COLOR_BGR2GRAY)
+
+    orb = cv2.ORB_create()
+
+    keypoints_1, descriptors_1 = orb.detectAndCompute(img1, None)
+    keypoints_2, descriptors_2 = orb.detectAndCompute(img2, None)
+
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING2, crossCheck=False)
+
+    if (descriptors_1 is not None and descriptors_2 is not None):
+        matches = bf.knnMatch(descriptors_1, descriptors_2, k=2)
+
+        good = []
+        for m, n in matches:
+            if m.distance < 0.8 * n.distance:
+                good.append([m])
+
+        print(len(good)/len(matches))
+
+        matchingImage = cv2.drawMatchesKnn(query, keypoints_1, compare, keypoints_2, good, compare, flags=2)
+
+        cv2.imshow("Image", matchingImage)
+        cv2.waitKey(0)
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     queryPath = "C:/Users/laub1/Desktop/4186/Queries/"
@@ -185,7 +232,10 @@ if __name__ == '__main__':
     #
     # # Hist(queryPath + '01', comparePath + '0017')
 
-    SIFT_BF(queryPath+"01", comparePath+"0017")
+    # SIFT_BF(queryPath+"01", comparePath+"0017")
+
+    ORB_BFKNN(queryPath+"02", comparePath+"3451")
+
 
     # for i in range(1, 2000):
     #     image = "0000" + str(i)
