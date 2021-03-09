@@ -30,6 +30,20 @@ def SIFT_BF(queryPath, comparePath):
     query = cv2.cvtColor(query, cv2.COLOR_BGR2GRAY)
     compare = cv2.cvtColor(compare, cv2.COLOR_BGR2GRAY)
 
+    width = int(query.shape[1] * 2)
+    height = int(query.shape[0] * 2)
+    dim = (width, height)
+
+    # query = cv2.resize(query, dim, interpolation=cv2.INTER_AREA)
+    # compare = cv2.resize(compare, dim, interpolation=cv2.INTER_AREA)
+
+    # kernel_size = 13
+    # query = cv2.GaussianBlur(query, (kernel_size, kernel_size), 0)
+    # compare = cv2.GaussianBlur(compare, (kernel_size, kernel_size), 0)
+
+    # query = cv2.Canny(query, 100, 200)
+    # compare = cv2.Canny(compare, 100, 200)
+
     sift = cv2.xfeatures2d.SIFT_create()
 
     keypoints_1, descriptors_1 = sift.detectAndCompute(query, None)
@@ -41,17 +55,19 @@ def SIFT_BF(queryPath, comparePath):
 
     good = []
     if (descriptors_1 is not None and descriptors_2 is not None):
-        for m, n in matches:
-            if m.distance < 0.8 * n.distance:
-                good.append([m])
+        if len(matches[0]) > 1:
+            for m, n in matches:
+                if m.distance < 0.75 * n.distance:
+                    good.append([m])
 
-        return (len(good)/len(matches))
+            return (len(good)/len(matches))
+        return 0
     return 0
 
-    # matchingImage = cv2.drawMatchesKnn(query, keypoints_1, compare, keypoints_2, good, compare, flags=2)
-    #
-    # cv2.imshow("Image", matchingImage)
-    # cv2.waitKey(0)
+    matchingImage = cv2.drawMatchesKnn(query, keypoints_1, compare, keypoints_2, good, compare, flags=2)
+
+    cv2.imshow("Image", matchingImage)
+    cv2.waitKey(0)
 
 def Hist(queryPath, comparePath):
     query = cv2.imread(queryPath + '.jpg')
