@@ -177,7 +177,7 @@ def YOLO(imagePath, confidence, threshold):
     cv2.waitKey(0)
 
 
-def ORB_BFBFKNN(queryPath, comparePath):
+def ORB_BFKNN(queryPath, comparePath):
     query = cv2.imread(queryPath + ".jpg")
     compare = cv2.imread(comparePath + ".jpg")
 
