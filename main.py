@@ -284,7 +284,7 @@ def ORB_BFKNN(queryPath, comparePath):
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    text_file = open("Output.txt", "w")
+    text_file = open("rankList.txt", "w")
     queryPath = "C:/Users/laub1/Desktop/4186/Queries/"
     comparePath = "C:/Users/laub1/Desktop/4186/Images/"
     list = []
@@ -303,7 +303,7 @@ if __name__ == '__main__':
             compareNum = "0000" + str(i)
             compareNum = compareNum[-4:]
             similarity = SIFT_BF(queryPath+queryNum, comparePath+compareNum)
-            print(compareNum + ': ' + str(similarity))
+            print(queryNum + '-' + compareNum + ': ' + str(similarity))
             temp = [i, similarity]
             list.append(temp)
 
