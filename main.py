@@ -40,16 +40,18 @@ def SIFT_BF(queryPath, comparePath):
     matches = bf.knnMatch(descriptors_1, descriptors_2, k=2)
 
     good = []
-    for m, n in matches:
-        if m.distance < 0.8 * n.distance:
-            good.append([m])
+    if (descriptors_1 is not None and descriptors_2 is not None):
+        for m, n in matches:
+            if m.distance < 0.8 * n.distance:
+                good.append([m])
 
-    print(len(good)/len(matches))
+        return (len(good)/len(matches))
+    return 0
 
-    matchingImage = cv2.drawMatchesKnn(query, keypoints_1, compare, keypoints_2, good, compare, flags=2)
-
-    cv2.imshow("Image", matchingImage)
-    cv2.waitKey(0)
+    # matchingImage = cv2.drawMatchesKnn(query, keypoints_1, compare, keypoints_2, good, compare, flags=2)
+    #
+    # cv2.imshow("Image", matchingImage)
+    # cv2.waitKey(0)
 
 def Hist(queryPath, comparePath):
     query = cv2.imread(queryPath + '.jpg')
@@ -100,12 +102,14 @@ def Hist(queryPath, comparePath):
     hist_compare = cv2.calcHist([compare], channels, None, histSize, ranges, accumulate=False)
     cv2.normalize(hist_compare, hist_compare, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
 
-    for compare_method in range(4):
-        query_query = cv2.compareHist(hist_query, hist_query, compare_method)
-        query_half = cv2.compareHist(hist_query, hist_half_down, compare_method)
-        query_compare = cv2.compareHist(hist_query, hist_compare, compare_method)
+    return cv2.compareHist(hist_query, hist_compare, 0)
 
-        print('Method:', compare_method, 'Perfect, Base-Half, Image-Compare :', query_query, '/', query_half, '/', query_compare)
+    # for compare_method in range(4):
+    #     query_query = cv2.compareHist(hist_query, hist_query, compare_method)
+    #     query_half = cv2.compareHist(hist_query, hist_half_down, compare_method)
+    #     query_compare = cv2.compareHist(hist_query, hist_compare, compare_method)
+    #
+    #     print('Method:', compare_method, 'Perfect, Base-Half, Image-Compare :', query_query, '/', query_half, '/', query_compare)
 
 def YOLO(imagePath, confidence, threshold):
     # confidence default 0.5, threshold default 0.3
@@ -176,6 +180,45 @@ def YOLO(imagePath, confidence, threshold):
     cv2.imshow("Image", img)
     cv2.waitKey(0)
 
+def ORB_BF(queryPath, comparePath):
+    query = cv2.imread(queryPath + ".jpg")
+    compare = cv2.imread(comparePath + ".jpg")
+
+    f1 = open(queryPath + ".txt").read().split()
+
+    x1 = int(f1[0])
+    y1 = int(f1[1])
+    w1 = int(f1[2])
+    h1 = int(f1[3])
+    query = query[y1:y1 + h1, x1:x1 + w1]
+
+    if int(str(comparePath).split('Images/')[1]) <= 2000:
+        f2 = open(comparePath + ".txt").read().split()
+
+        x2 = int(f2[0])
+        y2 = int(f2[1])
+        w2 = int(f2[2])
+        h2 = int(f2[3])
+        compare = compare[y2:y2 + h2, x2:x2 + w2]
+
+    img1 = cv2.cvtColor(query, cv2.COLOR_BGR2GRAY)
+    img2 = cv2.cvtColor(compare, cv2.COLOR_BGR2GRAY)
+
+    orb = cv2.ORB_create()
+
+    keypoints_1, descriptors_1 = orb.detectAndCompute(img1, None)
+    keypoints_2, descriptors_2 = orb.detectAndCompute(img2, None)
+
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+
+    if (descriptors_1 is not None and descriptors_2 is not None):
+        matches = bf.match(descriptors_1, descriptors_2)
+
+        similar_regions = [i for i in matches if i.distance < 50]
+        if len(matches) == 0:
+            return 0
+        return len(similar_regions) / len(matches)
+    return 0
 
 def ORB_BFKNN(queryPath, comparePath):
     query = cv2.imread(queryPath + ".jpg")
@@ -210,23 +253,24 @@ def ORB_BFKNN(queryPath, comparePath):
 
     if (descriptors_1 is not None and descriptors_2 is not None):
         matches = bf.knnMatch(descriptors_1, descriptors_2, k=2)
-
         good = []
-        for m, n in matches:
-            if m.distance < 0.8 * n.distance:
-                good.append([m])
+        if matches is not None and len(matches[0]) > 1:
+            for m, n in matches:
+                if m.distance < 0.8 * n.distance:
+                    good.append([m])
+            return len(good)/len(matches)
+        return 0
+    return 0
+        # matchingImage = cv2.drawMatchesKnn(query, keypoints_1, compare, keypoints_2, good, compare, flags=2)
 
-        print(len(good)/len(matches))
-
-        matchingImage = cv2.drawMatchesKnn(query, keypoints_1, compare, keypoints_2, good, compare, flags=2)
-
-        cv2.imshow("Image", matchingImage)
-        cv2.waitKey(0)
+        # cv2.imshow("Image", matchingImage)
+        # cv2.waitKey(0)
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     queryPath = "C:/Users/laub1/Desktop/4186/Queries/"
     comparePath = "C:/Users/laub1/Desktop/4186/Images/"
+    list = []
 
     # YOLO(comparePath + '2595', 0.5, 0.3)
     #
@@ -234,13 +278,22 @@ if __name__ == '__main__':
 
     # SIFT_BF(queryPath+"01", comparePath+"0017")
 
-    ORB_BFKNN(queryPath+"02", comparePath+"3451")
+    # ORB_BFKNN(queryPath+"02", comparePath+"3451")
 
+    for i in range(1, 254):
+        num = "0000" + str(i)
+        num = num[-4:]
+        similarity = SIFT_BF(queryPath+"01", comparePath+num)
+        print(num + ': ' + str(similarity))
+        temp = [i, similarity]
+        list.append(temp)
 
-    # for i in range(1, 2000):
-    #     image = "0000" + str(i)
-    #     image = image[-4:]
-    #     SIFT_BF("01", image)
+    list = sorted(list, key=lambda x: x[1], reverse=True)
+
+    for i in range(0, len(list)):
+        print(list[i][0])
+        print(list[i][1])
+
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
 
