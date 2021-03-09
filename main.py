@@ -284,6 +284,7 @@ def ORB_BFKNN(queryPath, comparePath):
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
+    text_file = open("Output.txt", "w")
     queryPath = "C:/Users/laub1/Desktop/4186/Queries/"
     comparePath = "C:/Users/laub1/Desktop/4186/Images/"
     list = []
@@ -295,21 +296,26 @@ if __name__ == '__main__':
     # SIFT_BF(queryPath+"01", comparePath+"0017")
 
     # ORB_BFKNN(queryPath+"02", comparePath+"3451")
+    for q in range(1, 11):
+        queryNum = "00" + str(q)
+        queryNum = queryNum[-2:]
+        for i in range(1, 5001):
+            compareNum = "0000" + str(i)
+            compareNum = compareNum[-4:]
+            similarity = SIFT_BF(queryPath+queryNum, comparePath+compareNum)
+            print(compareNum + ': ' + str(similarity))
+            temp = [i, similarity]
+            list.append(temp)
 
-    for i in range(1, 254):
-        num = "0000" + str(i)
-        num = num[-4:]
-        similarity = SIFT_BF(queryPath+"01", comparePath+num)
-        print(num + ': ' + str(similarity))
-        temp = [i, similarity]
-        list.append(temp)
+        list = sorted(list, key=lambda x: x[1], reverse=True)
 
-    list = sorted(list, key=lambda x: x[1], reverse=True)
-
-    for i in range(0, len(list)):
-        print(list[i][0])
-        print(list[i][1])
-
+        text_file.write('Q' + str(q) + ': ')
+        for i in range(0, len(list)):
+            text_file.write(str(list[i][0]))
+            text_file.write(' ')
+        text_file.write('\n')
+        list = []
+    text_file.close()
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
 
