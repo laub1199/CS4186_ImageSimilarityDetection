@@ -1,10 +1,8 @@
 import cv2
 import numpy as np
 import time
-# This is a sample Python script.
-
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+from PIL import Image
+from collections import Counter
 
 def SIFT_BF(queryPath, comparePath):
     query = cv2.imread(queryPath + ".jpg")
@@ -282,12 +280,69 @@ def ORB_BFKNN(queryPath, comparePath):
         # cv2.imshow("Image", matchingImage)
         # cv2.waitKey(0)
 
+def Method2(queryPath, comparePath):
+    query = cv2.imread(queryPath + ".jpg")
+    compare = cv2.imread(comparePath + ".jpg")
+
+    f1 = open(queryPath + ".txt").read().split()
+
+    x1 = int(f1[0])
+    y1 = int(f1[1])
+    w1 = int(f1[2])
+    h1 = int(f1[3])
+    query = query[y1:y1 + h1, x1:x1 + w1]
+
+    if int(str(comparePath).split('Images/')[1]) <= 2000:
+        f2 = open(comparePath + ".txt").read().split()
+
+        x2 = int(f2[0])
+        y2 = int(f2[1])
+        w2 = int(f2[2])
+        h2 = int(f2[3])
+        compare = compare[y2:y2 + h2, x2:x2 + w2]
+
+    query_arr = np.asarray(query)
+    query_arr_flat = query_arr.flatten()
+    query_RH = Counter(query_arr_flat)
+    query_H = []
+    for i in range(256):
+        if i in query_RH.keys():
+            query_H.append(query_RH[i])
+        else:
+            query_H.append(0)
+
+    compare_arr = np.asarray(compare)
+    compare_arr_flat = compare_arr.flatten()
+    compare_RH = Counter(compare_arr_flat)
+    compare_H = []
+    for i in range(256):
+        if i in compare_RH.keys():
+            compare_H.append(compare_RH[i])
+        else:
+            compare_H.append(0)
+
+    return L2Norm(query_H, compare_H)
+
+def L2Norm(H1,H2):
+    distance =0
+    for i in range(len(H1)):
+        distance += np.square(H1[i]-H2[i])
+    return np.sqrt(distance)
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     text_file = open("rankList.txt", "w")
-    queryPath = "C:/Users/laub1/Desktop/4186/Queries/"
+    # queryPath = "C:/Users/laub1/Desktop/4186/Queries/"
+    queryPath = "C:/Users/laub1/Desktop/4186/examples/example_query/"
     comparePath = "C:/Users/laub1/Desktop/4186/Images/"
     list = []
+
+
+    for i in range(1, 5001):
+        compareNum = "0000" + str(i)
+        compareNum = compareNum[-4:]
+        similarity = Method2(queryPath+'01', comparePath+compareNum)
+        print(compareNum + ': ' + str(similarity))
 
     # YOLO(comparePath + '2595', 0.5, 0.3)
     #
@@ -296,26 +351,26 @@ if __name__ == '__main__':
     # SIFT_BF(queryPath+"01", comparePath+"0017")
 
     # ORB_BFKNN(queryPath+"02", comparePath+"3451")
-    for q in range(1, 11):
-        queryNum = "00" + str(q)
-        queryNum = queryNum[-2:]
-        for i in range(1, 5001):
-            compareNum = "0000" + str(i)
-            compareNum = compareNum[-4:]
-            similarity = SIFT_BF(queryPath+queryNum, comparePath+compareNum)
-            print(queryNum + '-' + compareNum + ': ' + str(similarity))
-            temp = [i, similarity]
-            list.append(temp)
-
-        list = sorted(list, key=lambda x: x[1], reverse=True)
-
-        text_file.write('Q' + str(q) + ': ')
-        for i in range(0, len(list)):
-            text_file.write(str(list[i][0]))
-            text_file.write(' ')
-        text_file.write('\n')
-        list = []
-    text_file.close()
+    # for q in range(1, 11):
+    #     queryNum = "00" + str(q)
+    #     queryNum = queryNum[-2:]
+    #     for i in range(1, 5001):
+    #         compareNum = "0000" + str(i)
+    #         compareNum = compareNum[-4:]
+    #         similarity = ORB_BF(queryPath+queryNum, comparePath+compareNum)
+    #         print(queryNum + '-' + compareNum + ': ' + str(similarity))
+    #         temp = [i, similarity]
+    #         list.append(temp)
+    #
+    #     list = sorted(list, key=lambda x: x[1], reverse=True)
+    #
+    #     text_file.write('Q' + str(q) + ': ')
+    #     for i in range(0, len(list)):
+    #         text_file.write(str(list[i][0]))
+    #         text_file.write(' ')
+    #     text_file.write('\n')
+    #     list = []
+    # text_file.close()
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
 
