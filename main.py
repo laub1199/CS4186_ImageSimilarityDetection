@@ -280,7 +280,7 @@ def ORB_BFKNN(queryPath, comparePath):
         # cv2.imshow("Image", matchingImage)
         # cv2.waitKey(0)
 
-def Method2(queryPath, comparePath):
+def Euclidean(queryPath, comparePath):
     query = cv2.imread(queryPath + ".jpg")
     compare = cv2.imread(comparePath + ".jpg")
 
