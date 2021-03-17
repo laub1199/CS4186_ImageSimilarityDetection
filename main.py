@@ -326,7 +326,7 @@ def Method2(queryPath, comparePath):
 def L2Norm(H1,H2):
     distance =0
     for i in range(len(H1)):
-        distance += np.square(H1[i]-H2[i])
+        distance += (np.square(np.array(H1[i]-H2[i]), dtype='int64'))
     return np.sqrt(distance)
 
 # Press the green button in the gutter to run the script.
