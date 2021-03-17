@@ -329,6 +329,61 @@ def L2Norm(H1,H2):
         distance += (np.square(np.array(H1[i]-H2[i]), dtype='int64'))
     return np.sqrt(distance)
 
+def COS(queryPath, comparePath):
+    query = cv2.imread(queryPath + ".jpg")
+    compare = cv2.imread(comparePath + ".jpg")
+
+    f1 = open(queryPath + ".txt").read().split()
+
+    x1 = int(f1[0])
+    y1 = int(f1[1])
+    w1 = int(f1[2])
+    h1 = int(f1[3])
+    query = query[y1:y1 + h1, x1:x1 + w1]
+
+    if int(str(comparePath).split('Images/')[1]) <= 2000:
+        f2 = open(comparePath + ".txt").read().split()
+
+        x2 = int(f2[0])
+        y2 = int(f2[1])
+        w2 = int(f2[2])
+        h2 = int(f2[3])
+        compare = compare[y2:y2 + h2, x2:x2 + w2]
+
+    query_arr = np.asarray(query)
+    query_arr_flat = query_arr.flatten()
+    query_RH = Counter(query_arr_flat)
+    query_H = []
+    for i in range(256):
+        if i in query_RH.keys():
+            query_H.append(query_RH[i])
+        else:
+            query_H.append(0)
+
+    compare_arr = np.asarray(compare)
+    compare_arr_flat = compare_arr.flatten()
+    compare_RH = Counter(compare_arr_flat)
+    compare_H = []
+    for i in range(256):
+        if i in compare_RH.keys():
+            compare_H.append(compare_RH[i])
+        else:
+            compare_H.append(0)
+
+    return dot(query_H, compare_H) / (norm(query_H) * norm(compare_H))
+
+def dot(H1,H2):
+    distance =0
+    for i in range(len(H1)):
+        distance += H1[i] * H2[i]
+    return distance
+
+def norm(H):
+    distance =0
+    for i in range(len(H)):
+        distance += (np.square(np.array(H[i]), dtype='int64'))
+    return np.sqrt(distance)
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     text_file = open("rankList.txt", "w")
@@ -338,11 +393,15 @@ if __name__ == '__main__':
     list = []
 
 
-    for i in range(1, 5001):
+    for i in range(1, 2000):
         compareNum = "0000" + str(i)
         compareNum = compareNum[-4:]
-        similarity = Method2(queryPath+'01', comparePath+compareNum)
+        similarity = COS(queryPath+'01', comparePath+compareNum)
         print(compareNum + ': ' + str(similarity))
+        temp = [i, similarity]
+        list.append(temp)
+    list = sorted(list, key=lambda x: x[1], reverse=True)
+    print(list)
 
     # YOLO(comparePath + '2595', 0.5, 0.3)
     #
