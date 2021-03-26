@@ -1,8 +1,10 @@
+from __future__ import division
 import cv2
 import numpy as np
 import time
 from PIL import Image
 from collections import Counter
+from matplotlib import pyplot as plt
 
 def SIFT_BF(queryPath, comparePath):
     query = cv2.imread(queryPath + ".jpg")
@@ -28,36 +30,35 @@ def SIFT_BF(queryPath, comparePath):
     query = cv2.cvtColor(query, cv2.COLOR_BGR2GRAY)
     compare = cv2.cvtColor(compare, cv2.COLOR_BGR2GRAY)
 
-    width = int(query.shape[1] * 2)
-    height = int(query.shape[0] * 2)
-    dim = (width, height)
-
-    # query = cv2.resize(query, dim, interpolation=cv2.INTER_AREA)
-    # compare = cv2.resize(compare, dim, interpolation=cv2.INTER_AREA)
-
-    # kernel_size = 13
-    # query = cv2.GaussianBlur(query, (kernel_size, kernel_size), 0)
-    # compare = cv2.GaussianBlur(compare, (kernel_size, kernel_size), 0)
-
-    # query = cv2.Canny(query, 100, 200)
-    # compare = cv2.Canny(compare, 100, 200)
-
-    sift = cv2.xfeatures2d.SIFT_create()
+    sift = cv2.SIFT_create()
 
     keypoints_1, descriptors_1 = sift.detectAndCompute(query, None)
     keypoints_2, descriptors_2 = sift.detectAndCompute(compare, None)
 
-    bf = cv2.BFMatcher(cv2.NORM_L1, crossCheck=False)
+    # L1 0.0018
+    # L2 0.0030 good/matches 0.8
+    # cos sim 0.004477
+    bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
 
     matches = bf.knnMatch(descriptors_1, descriptors_2, k=2)
 
+    # matches = sorted(matches, key=lambda x:x.distance)
+
     good = []
+    m_dis = 0
+    n_dis = 0
+    dot = 0
     if (descriptors_1 is not None and descriptors_2 is not None):
         if len(matches[0]) > 1:
             for m, n in matches:
-                if m.distance < 0.75 * n.distance:
-                    good.append([m])
-
+                if m.distance < 0.8 * n.distance:
+                    dot += m.distance * n.distance
+                    m_dis += m.distance**2
+                    n_dis += n.distance**2
+            return dot / (np.sqrt(m_dis) * np.sqrt(n_dis))
+            #     if m.distance < 0.8 * n.distance:
+            #         good.append([m])
+            # return len(good) / (min(len(descriptors_1), len(descriptors_2)))
             return (len(good)/len(matches))
         return 0
     return 0
@@ -281,6 +282,7 @@ def ORB_BFKNN(queryPath, comparePath):
         # cv2.waitKey(0)
 
 def Euclidean(queryPath, comparePath):
+    # smaller better
     query = cv2.imread(queryPath + ".jpg")
     compare = cv2.imread(comparePath + ".jpg")
 
@@ -330,6 +332,7 @@ def L2Norm(H1,H2):
     return np.sqrt(distance)
 
 def COS(queryPath, comparePath):
+    # bigger better
     query = cv2.imread(queryPath + ".jpg")
     compare = cv2.imread(comparePath + ".jpg")
 
@@ -384,24 +387,79 @@ def norm(H):
         distance += (np.square(np.array(H[i]), dtype='int64'))
     return np.sqrt(distance)
 
+def SIFT_FLANN(queryPath, comparePath):
+    query = cv2.imread(queryPath + ".jpg")
+    compare = cv2.imread(comparePath + ".jpg")
+
+    f1 = open(queryPath + ".txt").read().split()
+
+    x1 = int(f1[0])
+    y1 = int(f1[1])
+    w1 = int(f1[2])
+    h1 = int(f1[3])
+    query = query[y1:y1 + h1, x1:x1 + w1]
+
+    if int(str(comparePath).split('Images/')[1]) <= 2000:
+        f2 = open(comparePath + ".txt").read().split()
+
+        x2 = int(f2[0])
+        y2 = int(f2[1])
+        w2 = int(f2[2])
+        h2 = int(f2[3])
+        compare = compare[y2:y2 + h2, x2:x2 + w2]
+
+
+    sift = cv2.xfeatures2d.SIFT_create()
+    keypoints_1, descriptors_1 = sift.detectAndCompute(query, None)
+    keypoints_2, descriptors_2 = sift.detectAndCompute(compare, None)
+
+    FLANN_INDEX_KDTREE = 0
+    index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
+    search_params = dict(checks=50)
+
+    flann = cv2.FlannBasedMatcher(index_params, search_params)
+
+    matches = flann.knnMatch(descriptors_1, descriptors_2, k=2)
+
+    # Need to draw only good matches, so create a mask
+    matchesMask = [[0, 0] for i in range(len(matches))]
+
+    # ratio test as per Lowe's paper
+    for i, (m, n) in enumerate(matches):
+        if m.distance < 0.7 * n.distance:
+            matchesMask[i] = [1, 0]
+
+    draw_params = dict(matchColor=(0, 255, 0),
+                       singlePointColor=(255, 0, 0),
+                       matchesMask=matchesMask,
+                       flags=0)
+
+    return len(draw_params)
+
+    img3 = cv2.drawMatchesKnn(query,keypoints_1,compare,keypoints_2,matches,None,**draw_params)
+
+    plt.imshow(img3, 'gray'), plt.show()
+
 # Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    text_file = open("rankList.txt", "w")
+
+def temp():
+    text_file = open("6-SIFT_LENGTH_10_example_rankList.txt", "w")
+    data_file = open("6-SIFT_LENGTH_10_example_data.txt", "w")
     # queryPath = "C:/Users/laub1/Desktop/4186/Queries/"
     queryPath = "C:/Users/laub1/Desktop/4186/examples/example_query/"
     comparePath = "C:/Users/laub1/Desktop/4186/Images/"
     list = []
 
 
-    for i in range(1, 2000):
-        compareNum = "0000" + str(i)
-        compareNum = compareNum[-4:]
-        similarity = COS(queryPath+'01', comparePath+compareNum)
-        print(compareNum + ': ' + str(similarity))
-        temp = [i, similarity]
-        list.append(temp)
-    list = sorted(list, key=lambda x: x[1], reverse=True)
-    print(list)
+    # for i in range(253, 1665):
+    #     compareNum = "0000" + str(i)
+    #     compareNum = compareNum[-4:]
+    #     similarity = SIFT_FLANN(queryPath+'01', comparePath+compareNum)
+    #     print(compareNum + ': ' + str(similarity))
+    #     temp = [i, similarity]
+    #     list.append(temp)
+    # list = sorted(list, key=lambda x: x[1], reverse=True)
+    # print(list)
 
     # YOLO(comparePath + '2595', 0.5, 0.3)
     #
@@ -410,27 +468,122 @@ if __name__ == '__main__':
     # SIFT_BF(queryPath+"01", comparePath+"0017")
 
     # ORB_BFKNN(queryPath+"02", comparePath+"3451")
-    # for q in range(1, 11):
-    #     queryNum = "00" + str(q)
-    #     queryNum = queryNum[-2:]
-    #     for i in range(1, 5001):
-    #         compareNum = "0000" + str(i)
-    #         compareNum = compareNum[-4:]
-    #         similarity = ORB_BF(queryPath+queryNum, comparePath+compareNum)
-    #         print(queryNum + '-' + compareNum + ': ' + str(similarity))
-    #         temp = [i, similarity]
-    #         list.append(temp)
-    #
-    #     list = sorted(list, key=lambda x: x[1], reverse=True)
-    #
-    #     text_file.write('Q' + str(q) + ': ')
-    #     for i in range(0, len(list)):
-    #         text_file.write(str(list[i][0]))
-    #         text_file.write(' ')
-    #     text_file.write('\n')
-    #     list = []
-    # text_file.close()
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+    for q in range(1, 11):
+        queryNum = "00" + str(q)
+        queryNum = queryNum[-2:]
+        for i in range(252, 5001):
+            compareNum = "0000" + str(i)
+            compareNum = compareNum[-4:]
+            similarity = SIFT_BF(queryPath+queryNum, comparePath+compareNum)
+            print(queryNum + '-' + compareNum + ': ' + str(similarity))
+            temp = [i, similarity]
+            list.append(temp)
+            data_file.write(str(q) + ' ' + compareNum + ' ' + str(similarity) + '\n')
+
+        # reverse true = descending
+        list = sorted(list, key=lambda x: x[1], reverse=False)
+
+        text_file.write('Q' + str(q) + ': ')
+        for i in range(0, len(list)):
+            text_file.write(str(list[i][0]))
+            text_file.write(' ')
+        text_file.write('\n')
+        list = []
+    text_file.close()
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+def reverse():
+    file = open("./6-SIFT_LENGTH_10_example_rankList.txt").read().splitlines()
+    out = open("6-SIFT_LENGTH_10_example_rankList_reverse.txt", "w")
+    for line in file:
+        strlist = line.split()
+        temp = []
+        for str in strlist:
+            if 'Q' not in str:
+                temp.append(str)
+            else:
+                out.write(str)
+        temp.reverse()
+        for str in temp:
+            out.write(' ' + str)
+        out.write('\n')
+
+def ave_pre(array):
+    ap = 0
+    for idx, m in enumerate(array):
+        ap_m = (idx + 1) / (m + 1)
+        ap = ap + ap_m
+    ap = ap / len(array)
+    return ap
+
+def check_precision(rank_result, till_q = 11):
+    # compute mean average precision
+    rank_line = open('rankList.txt').read().splitlines()
+    ap_sum = 0
+    for idx, line in enumerate(rank_result):
+        if idx > till_q:
+            break
+        line_str = line.split()
+        query_num = int(line_str[0][1]) - 1
+        result_num = [int(x) for x in line_str[1:]]
+        rank_str = rank_line[idx].split()
+        rank_gt = [int(x) for x in rank_str[1:]]
+        find_idx = []
+        for num in rank_gt:
+            ind = np.where(np.array(result_num) == num)
+            find_idx.extend(ind)
+        find_idx = np.array(find_idx).reshape(len(find_idx), )
+        find_idx = np.sort(find_idx)
+        ap = ave_pre(find_idx)
+        print("Average Precision of Q%d: %.4f" % (idx + 1, ap))
+        ap_sum = ap_sum + ap
+    print("Mean Average Precision: %f" % (ap_sum / len(rank_result)))
+
+def getRankList(method, index, q_from=1, q_to=11, c_from=1, c_to=5001, extraText='', isExample=True):
+    file_extends = "_10_example_" if isExample else "_" + str(q_to) + "_"
+    text_file = open(str(index) + "-" + method + file_extends + extraText + "rankList.txt", "w")
+    data_file = open(str(index) + "-" + method + file_extends + extraText + "data.txt", "w")
+    queryPath = "C:/Users/laub1/Desktop/4186/examples/example_query/" if isExample else "C:/Users/laub1/Desktop/4186/Queries/"
+    comparePath = "C:/Users/laub1/Desktop/4186/Images/"
+    list = []
+
+    for q in range(q_from, q_to):
+        queryNum = "00" + str(q)
+        queryNum = queryNum[-2:]
+        for i in range(c_from, c_to):
+            compareNum = "0000" + str(i)
+            compareNum = compareNum[-4:]
+            similarity = None
+            if method == "SIFT_BF":
+                similarity = SIFT_BF(queryPath+queryNum, comparePath+compareNum)
+            if method == "SIFT_FLANN":
+                similarity = SIFT_FLANN(queryPath+queryNum, comparePath+compareNum)
+            print(queryNum + '-' + compareNum + ': ' + str(similarity))
+            temp = [i, similarity]
+            list.append(temp)
+            data_file.write(str(q) + ' ' + compareNum + ' ' + str(similarity) + '\n')
+
+
+        # reverse true = descending
+        list = sorted(list, key=lambda x: x[1], reverse=False)
+
+        text_file.write('Q' + str(q) + ': ')
+        for i in range(0, len(list)):
+            text_file.write(str(list[i][0]))
+            text_file.write(' ')
+
+        text_file.write('\n')
+        list = []
+
+    text_file.close()
+    rankList = open(str(index) + "-" + method + file_extends + "rankList.txt").read().splitlines()
+    return rankList
+
+
+if __name__ == '__main__':
+    rankList = getRankList('SIFT_BF', 11, 1, 3, 1, 5001)
+    check_precision(rankList, 1)
+
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
