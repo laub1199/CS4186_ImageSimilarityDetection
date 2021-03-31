@@ -6,27 +6,7 @@ from PIL import Image
 from collections import Counter
 from matplotlib import pyplot as plt
 
-def SIFT_BF(queryPath, comparePath):
-    query = cv2.imread(queryPath + ".jpg")
-    compare = cv2.imread(comparePath + ".jpg")
-
-    f1 = open(queryPath + ".txt").read().split()
-
-    x1 = int(f1[0])
-    y1 = int(f1[1])
-    w1 = int(f1[2])
-    h1 = int(f1[3])
-    query = query[y1:y1 + h1, x1:x1 + w1]
-
-    if int(str(comparePath).split('Images/')[1]) <= 2000:
-        f2 = open(comparePath + ".txt").read().split()
-
-        x2 = int(f2[0])
-        y2 = int(f2[1])
-        w2 = int(f2[2])
-        h2 = int(f2[3])
-        compare = compare[y2:y2 + h2, x2:x2 + w2]
-
+def SIFT_BF(query, compare):
     query = cv2.cvtColor(query, cv2.COLOR_BGR2GRAY)
     compare = cv2.cvtColor(compare, cv2.COLOR_BGR2GRAY)
 
@@ -38,7 +18,7 @@ def SIFT_BF(queryPath, comparePath):
     # L1 0.0018
     # L2 0.0030 good/matches 0.8
     # cos sim 0.004477
-    bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
+    bf = cv2.BFMatcher()
 
     matches = bf.knnMatch(descriptors_1, descriptors_2, k=2)
 
@@ -48,20 +28,15 @@ def SIFT_BF(queryPath, comparePath):
     m_dis = 0
     n_dis = 0
     dot = 0
-    if (descriptors_1 is not None and descriptors_2 is not None):
-        if len(matches[0]) > 1:
-            for m, n in matches:
-                if m.distance < 0.8 * n.distance:
-                    dot += m.distance * n.distance
-                    m_dis += m.distance**2
-                    n_dis += n.distance**2
-            return dot / (np.sqrt(m_dis) * np.sqrt(n_dis))
-            #     if m.distance < 0.8 * n.distance:
-            #         good.append([m])
-            # return len(good) / (min(len(descriptors_1), len(descriptors_2)))
-            return (len(good)/len(matches))
-        return 0
-    return 0
+    for m, n in matches:
+        if m.distance < n.distance * 0.8:
+            good.append([m])
+    return (len(good)/len(matches))
+            # if m.distance * n.distance < 0.8 :
+            #         dot += m.distance * n.distance
+            #         m_dis += m.distance**2
+            #         n_dis += n.distance**2
+            # return dot / (np.sqrt(m_dis) * np.sqrt(n_dis))
 
     matchingImage = cv2.drawMatchesKnn(query, keypoints_1, compare, keypoints_2, good, compare, flags=2)
 
@@ -440,7 +415,25 @@ def SIFT_FLANN(queryPath, comparePath):
 
     plt.imshow(img3, 'gray'), plt.show()
 
-# Press the green button in the gutter to run the script.
+def MSE(query, compare):
+    query = cv2.resize(query, (500, 500), interpolation=cv2.INTER_AREA)
+    compare = cv2.resize(compare, (500, 500), interpolation=cv2.INTER_AREA)
+    error_rate = np.sum((compare.astype('float') - query.astype('float')) ** 2)
+    error_rate = error_rate / (float(compare.shape[0] * compare.shape[1]))
+    return error_rate
+
+########################################################################################################################
+#                                                                                                                      #
+#                                                                                                                      #
+#                                              All methods end here                                                    #
+#                                              All methods end here                                                    #
+#                                              All methods end here                                                    #
+#                                              All methods end here                                                    #
+#                                              All methods end here                                                    #
+#                                              All methods end here                                                    #
+#                                                                                                                      #
+#                                                                                                                      #
+########################################################################################################################
 
 def temp():
     text_file = open("6-SIFT_LENGTH_10_example_rankList.txt", "w")
@@ -494,8 +487,9 @@ def temp():
     cv2.destroyAllWindows()
 
 def reverse():
-    file = open("./6-SIFT_LENGTH_10_example_rankList.txt").read().splitlines()
-    out = open("6-SIFT_LENGTH_10_example_rankList_reverse.txt", "w")
+    path = '18-MSE_10_example_500_500_rankList'
+    file = open("./" + path + ".txt").read().splitlines()
+    out = open(path+"_reverse.txt", "w")
     for line in file:
         strlist = line.split()
         temp = []
@@ -555,10 +549,36 @@ def getRankList(method, index, q_from=1, q_to=11, c_from=1, c_to=5001, extraText
             compareNum = "0000" + str(i)
             compareNum = compareNum[-4:]
             similarity = None
+
+            query = cv2.imread(queryPath + queryNum + ".jpg")
+            compare = cv2.imread(comparePath + compareNum + ".jpg")
+
+            f1 = open(queryPath + queryNum + ".txt").read().split()
+
+            x1 = int(f1[0])
+            y1 = int(f1[1])
+            w1 = int(f1[2])
+            h1 = int(f1[3])
+            query = query[y1:y1 + h1, x1:x1 + w1]
+
+            if int(str(comparePath + compareNum).split('Images/')[1]) <= 2000:
+                f2 = open(comparePath + compareNum + ".txt").read().split()
+
+                x2 = int(f2[0])
+                y2 = int(f2[1])
+                w2 = int(f2[2])
+                h2 = int(f2[3])
+                compare = compare[y2:y2 + h2, x2:x2 + w2]
+
             if method == "SIFT_BF":
-                similarity = SIFT_BF(queryPath+queryNum, comparePath+compareNum)
-            if method == "SIFT_FLANN":
-                similarity = SIFT_FLANN(queryPath+queryNum, comparePath+compareNum)
+                similarity = SIFT_BF(query, compare)
+            if method == 'MSE':
+                similarity = MSE(query, compare)
+
+
+            # orb = ORB_BF(queryPath+queryNum, comparePath+compareNum)
+            # if orb == 0:
+            #     similarity = similarity * ORB_BF(queryPath+queryNum, comparePath+compareNum)
             print(queryNum + '-' + compareNum + ': ' + str(similarity))
             temp = [i, similarity]
             list.append(temp)
@@ -582,8 +602,9 @@ def getRankList(method, index, q_from=1, q_to=11, c_from=1, c_to=5001, extraText
 
 
 if __name__ == '__main__':
-    rankList = getRankList('SIFT_BF', 11, 1, 3, 1, 5001)
-    check_precision(rankList, 1)
+    # reverse()
+    rankList = getRankList('MSE', 18, 1, 3, 1, 5001,'500_500_')
+    # check_precision(rankList, 1)
 
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
