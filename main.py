@@ -24,14 +24,11 @@ def SIFT_BF(query, compare):
 
     # matches = sorted(matches, key=lambda x:x.distance)
 
-    good = []
-    m_dis = 0
-    n_dis = 0
-    dot = 0
+    quality_match = []
     for m, n in matches:
         if m.distance < n.distance * 0.8:
-            good.append([m])
-    return (len(good)/len(matches))
+            quality_match.append([m])
+    return (len(quality_match)/len(matches))
             # if m.distance * n.distance < 0.8 :
             #         dot += m.distance * n.distance
             #         m_dis += m.distance**2
@@ -422,6 +419,32 @@ def MSE(query, compare):
     error_rate = error_rate / (float(compare.shape[0] * compare.shape[1]))
     return error_rate
 
+
+def SSIM(query, compare):
+    height, width, channels = query.shape
+
+    query = cv2.resize(query, (height, width), interpolation=cv2.INTER_AREA)
+    compare = cv2.resize(compare, (height, width), interpolation=cv2.INTER_AREA)
+
+    num1 = (0.01 * 255) ** 2
+    num2 = (0.03 * 255) ** 2
+
+    query = query.astype(np.float64)
+    compare = compare.astype(np.float64)
+
+    kernel = cv2.getGaussianKernel(11, 1.5)
+    window = np.outer(kernel, kernel.transpose())
+
+    u_query = cv2.filter2D(query, -1, window)[5:-5, 5:-5]
+    u_compare = cv2.filter2D(compare, -1, window)[5:-5, 5:-5]
+
+    sigma_x_sq = cv2.filter2D(query ** 2, -1, window)[5:-5, 5:-5] - u_query ** 2
+    sigma_y_sq = cv2.filter2D(compare ** 2, -1, window)[5:-5, 5:-5] - u_compare ** 2
+    sigma_xy = cv2.filter2D(query * compare, -1, window)[5:-5, 5:-5] - u_query * u_compare
+
+    ssim_2d = ((2 * u_query * u_compare + num1) * (2 * sigma_xy + num2)) / ((u_query ** 2 + u_compare ** 2 + num1) * (sigma_x_sq + sigma_y_sq + num2))
+    return ssim_2d.mean()
+
 ########################################################################################################################
 #                                                                                                                      #
 #                                                                                                                      #
@@ -487,7 +510,7 @@ def temp():
     cv2.destroyAllWindows()
 
 def reverse():
-    path = '18-MSE_10_example_500_500_rankList'
+    path = '25-MSE_21_Final_rankList'
     file = open("./" + path + ".txt").read().splitlines()
     out = open(path+"_reverse.txt", "w")
     for line in file:
@@ -574,6 +597,8 @@ def getRankList(method, index, q_from=1, q_to=11, c_from=1, c_to=5001, extraText
                 similarity = SIFT_BF(query, compare)
             if method == 'MSE':
                 similarity = MSE(query, compare)
+            if method == 'SSIM':
+                similarity = SSIM(query, compare)
 
 
             # orb = ORB_BF(queryPath+queryNum, comparePath+compareNum)
@@ -586,7 +611,7 @@ def getRankList(method, index, q_from=1, q_to=11, c_from=1, c_to=5001, extraText
 
 
         # reverse true = descending
-        list = sorted(list, key=lambda x: x[1], reverse=False)
+        list = sorted(list, key=lambda x: x[1], reverse=True)
 
         text_file.write('Q' + str(q) + ': ')
         for i in range(0, len(list)):
@@ -600,11 +625,59 @@ def getRankList(method, index, q_from=1, q_to=11, c_from=1, c_to=5001, extraText
     rankList = open(str(index) + "-" + method + file_extends + "rankList.txt").read().splitlines()
     return rankList
 
+def method_combine (m1, m2):
+    file_m1 = open("./" + m1).read().splitlines()
+    file_m2 = open("./" + m2).read().splitlines()
+    out = open("3_24SIFT_25MSE_FULL_data.txt", "w")
+    text_file = open("3_24SIFT_25MSE_FULL_rankList.txt", "w")
+
+    m2_list = []
+    for x in range(0, 20):
+        max = 0
+        min = 0
+        mean = 0
+        for y in range(0, 5000):
+            prefix = x * 5000
+            line = prefix + y
+            m2_sim = float(file_m2[line].split(' ')[2])
+            max = m2_sim if m2_sim > max else max
+            min = m2_sim if m2_sim < min else min
+            mean = mean + m2_sim
+
+        mean = mean / 5000
+        temp=[min, mean, max, max-min]
+        m2_list.append(temp)
+
+    for x in range(0, 10):
+        list = []
+        for y in range(0, 5000):
+            prefix = x * 5000
+            line = prefix + y
+            m1_sim = 1000000 * float(file_m1[line].split(' ')[2])
+            m2_sim = float(file_m2[line].split(' ')[2])
+            m2_sim = 1 - (m2_sim - m2_list[x][0]) / (m2_list[x][3])
+            sim = m1_sim * m2_sim
+            out.write(str(file_m1[line].split(' ')[0]) + ' ' + file_m1[line].split(' ')[1] + ' ' + str(sim) + '\n')
+            temp=[y+1, sim]
+            list.append(temp)
+
+        # reverse true = descending
+        list = sorted(list, key=lambda x: x[1], reverse=True)
+
+        text_file.write('Q' + str(x+1) + ': ')
+        for i in range(0, len(list)):
+            text_file.write(str(list[i][0]))
+            text_file.write(' ')
+        text_file.write('\n')
+
+    # out = open(path+"_reverse.txt", "w")
+
 
 if __name__ == '__main__':
     # reverse()
-    rankList = getRankList('MSE', 18, 1, 3, 1, 5001,'500_500_')
+    # rankList = getRankList('MSE', 25, 1, 21, 1, 5001,'Final_', False)
     # check_precision(rankList, 1)
+    method_combine('24-SIFT_BF_21_Final_data.txt', '25-MSE_21_Final_data.txt')
 
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
