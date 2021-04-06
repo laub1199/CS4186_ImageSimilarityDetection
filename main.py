@@ -510,7 +510,7 @@ def temp():
     cv2.destroyAllWindows()
 
 def reverse():
-    path = '25-MSE_21_Final_rankList'
+    path = '23-MSE_10_example_FULL_LIST_rankList'
     file = open("./" + path + ".txt").read().splitlines()
     out = open(path+"_reverse.txt", "w")
     for line in file:
@@ -648,7 +648,7 @@ def method_combine (m1, m2):
         temp=[min, mean, max, max-min]
         m2_list.append(temp)
 
-    for x in range(0, 10):
+    for x in range(0, 20):
         list = []
         for y in range(0, 5000):
             prefix = x * 5000
@@ -675,7 +675,7 @@ def method_combine (m1, m2):
 
 if __name__ == '__main__':
     # reverse()
-    # rankList = getRankList('MSE', 25, 1, 21, 1, 5001,'Final_', False)
+    # rankList = getRankList('MSE', 99, 1, 11, 1, 5001,'Final_')
     # check_precision(rankList, 1)
     method_combine('24-SIFT_BF_21_Final_data.txt', '25-MSE_21_Final_data.txt')
 
